@@ -1,0 +1,390 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1.0,user-scalable=no,viewport-fit=cover">
+<meta name="theme-color" content="#1a0533">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Sweet Crush">
+<meta name="description" content="Match-3 candy puzzle game with 500 levels">
+<link rel="manifest" href="manifest.json">
+<link rel="apple-touch-icon" href="icon-192.png">
+<title>Sweet Crush</title>
+<style>
+  *{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
+  body{
+    min-height:100vh;min-height:100dvh;
+    background:linear-gradient(160deg,#1a0533 0%,#0f2355 60%,#0a1628 100%);
+    display:flex;flex-direction:column;align-items:center;
+    justify-content:flex-start;padding:env(safe-area-inset-top,16px) 10px 50px;
+    font-family:system-ui,-apple-system,sans-serif;overflow-x:hidden;
+  }
+  #install-banner{
+    display:none;width:100%;max-width:440px;
+    background:linear-gradient(135deg,#FFD700,#FF69B4);
+    border-radius:12px;padding:10px 16px;margin-bottom:10px;
+    flex-direction:row;align-items:center;justify-content:space-between;gap:10px;
+  }
+  #install-banner.show{display:flex}
+  #install-banner p{color:#fff;font-size:13px;font-weight:700;flex:1}
+  #install-btn{background:#fff;color:#c2185b;border:none;border-radius:8px;padding:8px 14px;font-weight:800;font-size:13px;cursor:pointer;white-space:nowrap}
+  #install-dismiss{background:none;border:none;color:rgba(255,255,255,.7);font-size:18px;cursor:pointer;padding:0 4px}
+  #title{
+    font-size:clamp(22px,7vw,34px);font-weight:900;letter-spacing:3px;
+    background:linear-gradient(90deg,#FFD700,#FF69B4,#00CED1);
+    -webkit-background-clip:text;-webkit-text-fill-color:transparent;
+    background-clip:text;margin-bottom:2px;text-align:center;
+  }
+  #subtitle{color:rgba(255,255,255,.5);font-size:12px;text-align:center;margin-bottom:10px}
+  #stats{display:flex;gap:8px;margin-bottom:8px;flex-wrap:wrap;justify-content:center}
+  .stat{background:rgba(255,255,255,.08);border:1px solid rgba(255,255,255,.15);border-radius:10px;padding:5px 12px;text-align:center;min-width:68px}
+  .stat-label{color:rgba(255,255,255,.4);font-size:9px;letter-spacing:1px}
+  .stat-val{font-size:17px;font-weight:800;color:#fff}
+  #progress-wrap{width:100%;max-width:440px;margin-bottom:6px}
+  #progress-bar-bg{height:5px;background:rgba(255,255,255,.15);border-radius:3px;overflow:hidden}
+  #progress-bar{height:100%;background:linear-gradient(90deg,#FFD700,#FF69B4);border-radius:3px;width:0%;transition:width .4s}
+  #progress-pct{color:rgba(255,255,255,.35);font-size:10px;text-align:right;margin-top:2px}
+  #board-wrap{position:relative}
+  #board{display:grid;padding:7px;gap:3px;background:rgba(255,255,255,.07);border-radius:14px;border:1.5px solid rgba(255,255,255,.18);box-shadow:0 12px 40px rgba(0,0,0,.6)}
+  .cell{display:flex;align-items:center;justify-content:center;border-radius:9px;cursor:pointer;font-weight:900;user-select:none;transition:transform .12s;position:relative;box-shadow:0 3px 6px rgba(0,0,0,.35),inset 0 1px 0 rgba(255,255,255,.3);border:1.5px solid transparent}
+  .cell.selected{transform:scale(1.16);z-index:2;border:2px solid #fff !important;box-shadow:0 0 0 3px rgba(255,255,255,.4),0 4px 12px rgba(0,0,0,.4)!important}
+  .cell.adjacent{border:2px dashed rgba(255,255,255,.7) !important}
+  .cell.obstacle{background:rgba(0,0,0,.4) !important;cursor:default;box-shadow:none;border:1px solid rgba(255,255,255,.08)!important}
+  #hint{color:rgba(255,255,255,.35);font-size:11px;margin-top:8px;text-align:center}
+  #nav{display:flex;gap:8px;margin-top:12px;flex-wrap:wrap;justify-content:center}
+  .nav-btn{padding:7px 13px;border-radius:8px;border:1px solid rgba(255,255,255,.2);background:rgba(255,255,255,.12);color:#fff;font-size:12px;font-weight:600;cursor:pointer;letter-spacing:.4px}
+  .nav-btn:active{opacity:.7}
+  #level-jump{display:none;flex-direction:row;align-items:center;gap:8px;margin-top:8px;background:rgba(255,255,255,.08);padding:10px 14px;border-radius:10px;border:1px solid rgba(255,255,255,.15)}
+  #level-jump input{width:65px;padding:6px 8px;border-radius:6px;border:1px solid rgba(255,255,255,.3);background:rgba(255,255,255,.1);color:#fff;font-size:15px;text-align:center}
+  #level-jump button{padding:6px 13px;border-radius:7px;border:none;background:linear-gradient(135deg,#FFD700,#FF69B4);color:#fff;font-weight:800;cursor:pointer;font-size:14px}
+  #legend{display:flex;gap:6px;margin-top:14px;flex-wrap:wrap;justify-content:center}
+  .legend-item{font-size:10px;color:rgba(255,255,255,.5);padding:3px 9px;border-radius:20px;border:1px solid rgba(255,255,255,.12)}
+  #modal{display:none;position:fixed;inset:0;background:rgba(0,0,0,.75);backdrop-filter:blur(6px);align-items:center;justify-content:center;z-index:200}
+  #modal.show{display:flex}
+  #modal-box{background:linear-gradient(145deg,#1e0b40,#0f2355);border:2px solid rgba(255,255,255,.25);border-radius:20px;padding:28px 30px;text-align:center;color:#fff;max-width:300px;width:90%;box-shadow:0 24px 60px rgba(0,0,0,.8)}
+  #modal-icon{font-size:50px;margin-bottom:8px}
+  #modal-title{font-size:22px;font-weight:900;margin-bottom:6px}
+  #modal-msg{font-size:13px;opacity:.75;margin-bottom:10px}
+  #modal-preview{background:rgba(255,255,255,.08);border-radius:8px;padding:7px 11px;font-size:12px;opacity:.7;margin-bottom:12px}
+  #modal-btns{display:flex;gap:10px;justify-content:center;flex-wrap:wrap}
+  .modal-btn{padding:10px 18px;border-radius:10px;border:none;font-size:14px;font-weight:800;cursor:pointer;color:#fff}
+  .particle{position:absolute;width:7px;height:7px;border-radius:50%;pointer-events:none;animation:pop .65s ease-out forwards}
+  @keyframes pop{0%{opacity:1;transform:translate(0,0) scale(1)}100%{opacity:0;transform:translate(var(--dx),var(--dy)) scale(0)}}
+</style>
+</head>
+<body>
+
+<!-- Install Banner -->
+<div id="install-banner">
+  <p>📲 Install Sweet Crush as an app!</p>
+  <button id="install-btn">Install</button>
+  <button id="install-dismiss">✕</button>
+</div>
+
+<div id="title">SWEET CRUSH</div>
+<div id="subtitle">Level 1 of 500</div>
+
+<div id="stats">
+  <div class="stat"><div class="stat-label">SCORE</div><div class="stat-val" id="s-score">0</div></div>
+  <div class="stat"><div class="stat-label">TARGET</div><div class="stat-val" id="s-target">0</div></div>
+  <div class="stat"><div class="stat-label">MOVES</div><div class="stat-val" id="s-moves" style="color:#00CED1">0</div></div>
+</div>
+
+<div id="progress-wrap">
+  <div id="progress-bar-bg"><div id="progress-bar"></div></div>
+  <div id="progress-pct">0%</div>
+</div>
+
+<div id="board-wrap">
+  <div id="board"></div>
+</div>
+
+<div id="hint">Tap a candy, then tap an adjacent one to swap</div>
+
+<div id="nav">
+  <button class="nav-btn" onclick="prevLevel()">‹ Prev</button>
+  <button class="nav-btn" onclick="toggleJump()">Jump to Level</button>
+  <button class="nav-btn" onclick="nextLevel()">Next ›</button>
+</div>
+
+<div id="level-jump">
+  <input type="number" id="jump-input" min="1" max="500" value="1">
+  <button onclick="doJump()">Go</button>
+</div>
+
+<div id="legend">
+  <div class="legend-item"><span style="color:#2ecc71;font-weight:700">Lv 1–50</span> · 6×6, 4 colors</div>
+  <div class="legend-item"><span style="color:#f39c12;font-weight:700">Lv 51–200</span> · 7×7, 5–6 colors</div>
+  <div class="legend-item"><span style="color:#e74c3c;font-weight:700">Lv 201–500</span> · 8×8 + obstacles</div>
+</div>
+
+<div id="modal">
+  <div id="modal-box">
+    <div id="modal-icon">🎉</div>
+    <div id="modal-title"></div>
+    <div id="modal-msg"></div>
+    <div id="modal-preview"></div>
+    <div id="modal-btns"></div>
+  </div>
+</div>
+
+<script>
+// PWA Install prompt
+let deferredPrompt = null;
+window.addEventListener('beforeinstallprompt', e => {
+  e.preventDefault();
+  deferredPrompt = e;
+  document.getElementById('install-banner').classList.add('show');
+});
+document.getElementById('install-btn').addEventListener('click', async () => {
+  if (!deferredPrompt) return;
+  deferredPrompt.prompt();
+  const { outcome } = await deferredPrompt.userChoice;
+  deferredPrompt = null;
+  document.getElementById('install-banner').classList.remove('show');
+});
+document.getElementById('install-dismiss').addEventListener('click', () => {
+  document.getElementById('install-banner').classList.remove('show');
+});
+window.addEventListener('appinstalled', () => {
+  document.getElementById('install-banner').classList.remove('show');
+});
+
+// Register Service Worker
+if ('serviceWorker' in navigator) {
+  window.addEventListener('load', () => {
+    navigator.serviceWorker.register('./sw.js')
+      .then(reg => console.log('SW registered:', reg.scope))
+      .catch(err => console.log('SW error:', err));
+  });
+}
+
+// Game Logic
+const COLORS = ['#e74c3c','#e67e22','#f1c40f','#2ecc71','#3498db','#9b59b6','#e91e63'];
+const DARKS  = ['#c0392b','#d35400','#f39c12','#27ae60','#2980b9','#8e44ad','#c2185b'];
+const LIGHTS = ['#fadbd8','#fdebd0','#fef9e7','#d5f5e3','#d6eaf8','#e8daef','#fce4ec'];
+const ICONS  = ['♦','●','▲','★','■','♥','✦'];
+const CELL_SIZES = {6:58,7:50,8:44};
+
+let level=1,cfg={},board=[],selected=null,score=0,moves=0,status='playing';
+
+function getLevelConfig(lv){
+  return{
+    gridSize:lv<=50?6:lv<=200?7:8,
+    colorCnt:Math.min(7,4+Math.floor(lv/80)),
+    movesN:Math.max(10,Math.round(32-lv*0.04)),
+    target:Math.round(250*lv+lv*lv*1.8),
+    obstPct:lv>100?Math.min(0.15,(lv-100)*0.001):0
+  };
+}
+
+function createBoard(){
+  for(let a=0;a<50;a++){
+    const b=Array.from({length:cfg.gridSize},()=>
+      Array.from({length:cfg.gridSize},()=>{
+        if(Math.random()<cfg.obstPct)return{type:'obstacle',color:-1};
+        return{type:'candy',color:Math.floor(Math.random()*cfg.colorCnt)};
+      })
+    );
+    if(!findMatches(b).length)return b;
+  }
+  return Array.from({length:cfg.gridSize},()=>
+    Array.from({length:cfg.gridSize},()=>({type:'candy',color:Math.floor(Math.random()*cfg.colorCnt)})));
+}
+
+function findMatches(b){
+  const R=b.length,C=b[0].length,matched=new Set();
+  for(let r=0;r<R;r++){
+    for(let c=0;c<C-2;c++){
+      const cell=b[r][c];
+      if(!cell||cell.type!=='candy')continue;
+      const v=cell.color;
+      if(b[r][c+1]?.color===v&&b[r][c+1]?.type==='candy'&&b[r][c+2]?.color===v&&b[r][c+2]?.type==='candy'){
+        let e=c+2;while(e+1<C&&b[r][e+1]?.color===v&&b[r][e+1]?.type==='candy')e++;
+        for(let i=c;i<=e;i++)matched.add(r+','+i);c=e;
+      }
+    }
+  }
+  for(let c=0;c<C;c++){
+    for(let r=0;r<R-2;r++){
+      const cell=b[r][c];
+      if(!cell||cell.type!=='candy')continue;
+      const v=cell.color;
+      if(b[r+1][c]?.color===v&&b[r+1][c]?.type==='candy'&&b[r+2][c]?.color===v&&b[r+2][c]?.type==='candy'){
+        let e=r+2;while(e+1<R&&b[e+1][c]?.color===v&&b[e+1][c]?.type==='candy')e++;
+        for(let i=r;i<=e;i++)matched.add(i+','+c);r=e;
+      }
+    }
+  }
+  return[...matched].map(s=>s.split(',').map(Number));
+}
+
+function applyGravity(b){
+  const R=b.length,C=b[0].length;
+  const nb=b.map(row=>row.map(c=>c?{...c}:null));
+  for(let c=0;c<C;c++){
+    let bottom=R-1;
+    for(let r=R-1;r>=0;r--){
+      if(nb[r][c]&&nb[r][c].type!=='obstacle'){nb[bottom][c]=nb[r][c];if(bottom!==r)nb[r][c]=null;bottom--;}
+      else if(nb[r][c]?.type==='obstacle'){bottom=r-1;}
+    }
+    for(let r=bottom;r>=0;r--)if(!nb[r][c])nb[r][c]={type:'candy',color:Math.floor(Math.random()*cfg.colorCnt)};
+  }
+  return nb;
+}
+
+function cascade(initBoard){
+  let cur=initBoard.map(row=>row.map(c=>c?{...c}:null));
+  let totalScore=0,step=0;
+  while(true){
+    const m=findMatches(cur);
+    if(!m.length)break;
+    step++;totalScore+=m.length*10*step;
+    for(const[r,c]of m)cur[r][c]=null;
+    cur=applyGravity(cur);
+  }
+  return{board:cur,score:totalScore};
+}
+
+function startLevel(lv){
+  level=Math.max(1,Math.min(500,lv));
+  cfg=getLevelConfig(level);
+  board=createBoard();
+  selected=null;score=0;moves=cfg.movesN;status='playing';
+  document.getElementById('level-jump').style.display='none';
+  document.getElementById('modal').classList.remove('show');
+  document.getElementById('jump-input').value=level;
+  renderAll();
+}
+
+function renderAll(){updateStats();renderBoard();}
+
+function updateStats(){
+  document.getElementById('s-score').textContent=score.toLocaleString();
+  document.getElementById('s-target').textContent=cfg.target.toLocaleString();
+  const mv=document.getElementById('s-moves');
+  mv.textContent=moves;mv.style.color=moves<=5?'#FF4757':'#00CED1';
+  document.getElementById('subtitle').textContent=
+    'Level '+level+' of 500'+(cfg.gridSize===7?' · 7×7':cfg.gridSize===8?' · 8×8':'')+
+    (cfg.colorCnt>=7?' · Expert':cfg.colorCnt>=6?' · Hard':'');
+  const pct=Math.min(100,Math.round((score/cfg.target)*100));
+  document.getElementById('progress-bar').style.width=pct+'%';
+  document.getElementById('progress-pct').textContent=pct+'%';
+}
+
+function renderBoard(){
+  const el=document.getElementById('board');
+  const cs=CELL_SIZES[cfg.gridSize];
+  const vw=Math.min(window.innerWidth-20,440);
+  const maxCs=Math.floor((vw-14-(cfg.gridSize-1)*3)/cfg.gridSize);
+  const cellSz=Math.min(cs,maxCs);
+  el.style.gridTemplateColumns=`repeat(${cfg.gridSize},${cellSz}px)`;
+  el.innerHTML='';
+  for(let r=0;r<cfg.gridSize;r++){
+    for(let c=0;c<cfg.gridSize;c++){
+      const cell=board[r][c];
+      const div=document.createElement('div');
+      div.className='cell';
+      div.style.width=cellSz+'px';div.style.height=cellSz+'px';
+      div.style.fontSize=Math.round(cellSz*0.42)+'px';
+      if(!cell||cell.type==='obstacle'){
+        div.classList.add('obstacle');
+      }else{
+        const col=cell.color;
+        const isSel=selected&&selected.r===r&&selected.c===c;
+        const isAdj=selected&&!isSel&&(Math.abs(r-selected.r)+Math.abs(c-selected.c))===1;
+        div.style.background=isSel
+          ?`radial-gradient(circle at 40% 35%,#ffffff88,${COLORS[col]})`
+          :`radial-gradient(circle at 38% 32%,${LIGHTS[col]},${COLORS[col]} 55%,${DARKS[col]})`;
+        div.style.borderColor=DARKS[col];
+        div.style.color=isSel?'white':DARKS[col];
+        div.textContent=ICONS[col];
+        if(isSel)div.classList.add('selected');
+        if(isAdj)div.classList.add('adjacent');
+        div.addEventListener('click',()=>handleCell(r,c));
+      }
+      el.appendChild(div);
+    }
+  }
+}
+
+function handleCell(r,c){
+  if(status!=='playing')return;
+  const cell=board[r][c];
+  if(!cell||cell.type==='obstacle')return;
+  if(!selected){selected={r,c};renderBoard();return;}
+  const dr=Math.abs(r-selected.r),dc=Math.abs(c-selected.c);
+  if(dr+dc!==1){selected={r,c};renderBoard();return;}
+  const nb=board.map(row=>row.map(c=>c?{...c}:null));
+  [nb[r][c],nb[selected.r][selected.c]]=[nb[selected.r][selected.c],nb[r][c]];
+  const{board:nb2,score:gained}=cascade(nb);
+  if(gained===0){selected=null;renderBoard();return;}
+  const color=cell.color;
+  board=nb2;score+=gained;moves--;selected=null;
+  spawnParticles(r,c,color);
+  updateStats();renderBoard();
+  if(score>=cfg.target)showModal('won');
+  else if(moves<=0)showModal('lost');
+}
+
+function spawnParticles(r,c,col){
+  const vw=Math.min(window.innerWidth-20,440);
+  const maxCs=Math.floor((vw-14-(cfg.gridSize-1)*3)/cfg.gridSize);
+  const cellSz=Math.min(CELL_SIZES[cfg.gridSize],maxCs);
+  const cx=c*(cellSz+3)+cellSz/2+7;
+  const cy=r*(cellSz+3)+cellSz/2+7;
+  for(let i=0;i<6;i++){
+    const p=document.createElement('div');
+    p.className='particle';
+    const dx=(Math.random()-.5)*70,dy=(Math.random()-.7)*70;
+    p.style.cssText=`left:${cx}px;top:${cy}px;background:${COLORS[col]};--dx:${dx}px;--dy:${dy}px`;
+    document.getElementById('board-wrap').appendChild(p);
+    setTimeout(()=>p.remove(),700);
+  }
+}
+
+function showModal(state){
+  status=state;
+  const nc=getLevelConfig(level+1);
+  document.getElementById('modal-icon').textContent=state==='won'?'🎉':'💔';
+  document.getElementById('modal-title').textContent=state==='won'?'Level Complete!':'Out of Moves!';
+  document.getElementById('modal-msg').textContent=state==='won'
+    ?`You scored ${score.toLocaleString()} on level ${level}!`
+    :`Needed ${cfg.target.toLocaleString()} — you got ${score.toLocaleString()}`;
+  const prev=document.getElementById('modal-preview');
+  if(state==='won'&&level<500){prev.style.display='block';prev.textContent=`Next → Level ${level+1}: ${nc.gridSize}×${nc.gridSize} grid, ${nc.colorCnt} colors, ${nc.movesN} moves`;}
+  else{prev.style.display='none';}
+  const btns=document.getElementById('modal-btns');btns.innerHTML='';
+  const retry=document.createElement('button');
+  retry.className='modal-btn';retry.style.background='#444';
+  retry.textContent='↺ Retry';retry.onclick=()=>startLevel(level);btns.appendChild(retry);
+  if(state==='won'&&level<500){
+    const next=document.createElement('button');
+    next.className='modal-btn';next.style.background='linear-gradient(135deg,#FFD700,#FF69B4)';
+    next.textContent='Next Level →';next.onclick=()=>startLevel(level+1);btns.appendChild(next);
+  }
+  if(state==='won'&&level===500){
+    const ag=document.createElement('button');
+    ag.className='modal-btn';ag.style.background='linear-gradient(135deg,#FFD700,#FF69B4)';
+    ag.textContent='🏆 Play Again';ag.onclick=()=>startLevel(1);btns.appendChild(ag);
+  }
+  document.getElementById('modal').classList.add('show');
+}
+
+function prevLevel(){if(level>1)startLevel(level-1);}
+function nextLevel(){if(level<500)startLevel(level+1);}
+function toggleJump(){
+  const el=document.getElementById('level-jump');
+  el.style.display=el.style.display==='flex'?'none':'flex';
+}
+function doJump(){
+  const n=parseInt(document.getElementById('jump-input').value);
+  if(n>=1&&n<=500)startLevel(n);
+}
+
+startLevel(1);
+</script>
+</body>
+</html>
